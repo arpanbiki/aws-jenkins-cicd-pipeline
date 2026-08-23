@@ -108,3 +108,22 @@ master branch
      |
      v
  Live Website
+
+Production Branch
+master
+   |
+   v
+Build
+   |
+   v
+Test
+   |
+   v
+Production
+   |
+   v
+Docker Container
+   |
+   v
+Live Website
+
