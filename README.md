@@ -83,6 +83,7 @@ graph LR
     C -->|master branch| E[🚀 Prod Agent / Deploy]
     E -->|Ansible Playbook| F[🐳 Docker Container]
     F --> G((🌐 Live Web App))
+```
 
 # ❗ Problem Statement
 
