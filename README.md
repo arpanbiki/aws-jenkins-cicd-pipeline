@@ -68,61 +68,18 @@ A complete branch-based CI/CD implementation with automated build, testing and p
 
 This project implements a complete **DevOps CI/CD lifecycle** for a web application using AWS EC2, Ubuntu Linux, Ansible, Jenkins, GitHub, GitHub Webhooks and Docker.
 
-The application source code is maintained in GitHub. Developers work with two main branches:
-- `develop`: Triggers automated integration builds and testing suites.
-- `master`: Triggers automated production deployments using Ansible and Docker.
+The application source code is maintained in GitHub. Developers work with two branches:
 
----
+- `develop`
+- `master`
 
-# ❗ Problem Statement
-
-Manual deployments lead to human error, slow release cycles, inconsistent environments, and delayed feedback loops. This project replaces manual intervention with an automated, reliable pipeline from code commit to containerized live deployment.
-
----
-
-# 🎯 Project Objectives
-
-- **Automation:** Trigger builds instantly on code push using GitHub Webhooks.
-- **Branch Isolation:** Separate CI testing (`develop`) from CD production releases (`master`).
-- **Configuration as Code:** Use Ansible playbooks for server configuration and node management.
-- **Containerization:** Standardize deployments using isolated Docker containers.
-
----
-
-# 💡 Solution
-
-An automated end-to-end continuous integration and deployment pipeline triggered via GitHub Webhooks. Jenkins orchestrates the build and test tasks across dedicated agent nodes, while Ansible provisions target servers and deploys the containerized application using Docker.
-
----
-
-# 🏗️ Architecture
+### 🔄 Visual Workflow Diagram
 
 ```mermaid
-graph TD
-    subgraph "Source Control"
-        Dev[👨‍💻 Developer] -->|git push| GH[🐙 GitHub Repository]
-        GH -->|Webhook Payload| WH[🔔 GitHub Webhook]
-    end
-
-    subgraph "Jenkins Automation Pipeline"
-        WH --> Controller[⚙️ Jenkins Controller]
-        Controller -->|Branch: develop| AgentDev[🧪 Agent Node: Staging]
-        Controller -->|Branch: master| AgentProd[🚀 Agent Node: Production]
-    end
-
-    subgraph "Execution & Configuration"
-        AgentDev -->|Run Script| Tests[⚡ Build & Test Suite]
-        AgentProd -->|Run Playbook| Ansible[📜 Ansible Automation]
-        Ansible -->|Build/Run| Docker[🐳 Docker Engine]
-    end
-
-    subgraph "Deployment Environment"
-        Docker -->|Expose Port 80| AppContainer[🌐 Containerized Application]
-        AppContainer --> User((👥 End User))
-    end
-
-    style Dev fill:#4A5568,color:#fff
-    style GH fill:#181717,color:#fff
-    style Controller fill:#D24939,color:#fff
-    style Docker fill:#2496ED,color:#fff
-    style User fill:#FF9900,color:#fff
+graph LR
+    A[👨‍💻 Developer] -->|git push| B[🐙 GitHub Repository]
+    B -->|Webhook Event| C[⚙️ Jenkins Controller]
+    C -->|develop branch| D[🧪 Staging Agent / Test]
+    C -->|master branch| E[🚀 Prod Agent / Deploy]
+    E -->|Ansible Playbook| F[🐳 Docker Container]
+    F --> G((🌐 Live Web App))
