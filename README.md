@@ -1130,468 +1130,330 @@ curl http://localhost
   docker rm -f finalrelease-container
   # Re-trigger Prod pipeline
   ```
-11. GitHub Webhook 403
+  ### 11. GitHub Webhook 403 Error
+* **Initial Error:**
+  ```text
+  HTTP ERROR 403
+  No valid crumb was included in the request
+  Endpoint: /github-webhook/invoke
+  ```
+* **Cause:** Jenkins rejected the incoming webhook request due to crumb/CSRF protection settings.
+* **Solution:**
+  1. Navigate to:
+     ```text
+     Jenkins ➔ Manage Jenkins ➔ Security
+     ```
+  2. Verify and adjust CSRF settings or verify the **GitHub plugin configuration** to allow webhook triggers safely.
+* **Expected Result:**
+  ```text
+  GitHub Push ➔ Webhook Payload ➔ HTTP 200 OK ➔ Jenkins Build Triggered
+  ```
 
-Initial error encountered:
+### 12. Production Docker Permission Issue
+* **Error:** `permission denied while trying to connect to Docker API`
+* **Solution:** Run the following commands on the production node:
+  ```bash
+  # Grant jenkins user access to the docker group
+  sudo usermod -aG docker jenkins
 
-HTTP ERROR 403
-No valid crumb was included in the request
+  # Restart Jenkins service
+  sudo systemctl restart jenkins
 
-Endpoint:
+  # Verify permissions
+  sudo -u jenkins docker ps
+  ```
 
-/github-webhook/invoke
+---
 
-This indicated that Jenkins was rejecting the webhook request because of crumb/CSRF validation.
+# 🔐 Security Practices
 
-Verify:
+### Implemented Practices
+* **Credentials Management:** GitHub credentials and Personal Access Tokens (PAT) securely stored in Jenkins Credentials Manager.
+* **Access Control:** SSH keys used exclusively for remote server administration.
+* **Network Isolation:** AWS Security Groups restrict inbound traffic to required ports only.
+* **Role Isolation:** Docker execution permissions granted exclusively to authorized system users (`jenkins`).
+* **Branch Protection:** Production deployments (`master`) separated strictly from staging (`develop`).
 
-Jenkins
-→ Manage Jenkins
-→ Security
+### Recommended Production Enhancements
+* Enforce **HTTPS / TLS** termination for all web traffic.
+* Implement **AWS IAM least-privilege** policies.
+* Store sensitive parameters in **AWS Secrets Manager** or HashiCorp Vault.
+* Deploy application nodes inside **Private Subnets** behind an Application Load Balancer (ALB).
+* Enable automated **Docker container vulnerability scanning** (Trivy, Grype).
+* Establish centralized logging and monitoring (Elasticsearch/Fluentd/Kibana or CloudWatch).
 
-and verify the GitHub webhook trigger configuration.
+---
 
-After correcting the webhook configuration, the expected result is:
+# 🧪 Testing and Validation Commands
 
-GitHub
-   |
-   v
-Webhook
-   |
-   v
-HTTP 200
-   |
-   v
-Jenkins Build
-12. Production Docker Permission Issue
+Execute these verification checks across your environment:
 
-If the production pipeline shows:
-
-permission denied while trying to connect to Docker API
-
-run on the production server:
-
-sudo usermod -aG docker jenkins
-
-Then:
-
-sudo systemctl restart jenkins
-
-Verify:
-
-sudo -u jenkins docker ps
-🔐 Security
-
-The project uses several security practices:
-
-GitHub credentials stored in Jenkins Credentials.
-Personal Access Token instead of GitHub password.
-SSH for server administration.
-AWS Security Groups.
-Jenkins authentication.
-Separate development and production branches.
-Docker access granted only to required users.
-Production deployment controlled through master.
-
-For production environments, further improvements should include:
-
-HTTPS
-AWS IAM least privilege
-AWS Secrets Manager
-Private subnets
-Restricted security groups
-Image vulnerability scanning
-Centralized logging
-🧪 Testing and Validation
-Ansible
+```bash
+# 1. Test Ansible Connectivity
 ansible all -m ping
 
-Expected:
-
-SUCCESS
-Java
+# 2. Verify Java Environment
 java -version
-Docker
+
+# 3. Verify Docker Installation
 docker --version
-Jenkins Docker Permission
+
+# 4. Verify Jenkins Docker Socket Access
 sudo -u jenkins docker ps
-Git
+
+# 5. Check Git Remote Repositories
 git remote -v
-Docker Image
+
+# 6. List Local Docker Images
 docker images
-Production Container
+
+# 7. List Active Docker Containers
 docker ps
-Application
+
+# 8. Test Web Application Local Endpoint
 curl http://localhost
-Webhook
+```
 
-GitHub:
+### GitHub Webhook Delivery Test
+1. Go to: `GitHub ➔ Settings ➔ Webhooks ➔ Recent Deliveries`
+2. **Expected Response:** `HTTP 200 OK`
 
-Settings
-→ Webhooks
-→ Recent Deliveries
+---
 
-Expected:
+# 📊 Jenkins Job Architecture
 
-HTTP 200
-Success
-📊 Jenkins Job Summary
-Job	Agent	Responsibility
-Build	Slave1	Git Checkout + Docker Build
-Test	Slave2	Application Testing
-Prod	Master	Production Deployment
-🌿 Branch Summary
-Branch	Build	Test	Production
-develop	✅	✅	❌
-master	✅	✅	✅
-📈 Advantages
-Fully automated CI/CD
-Reduced manual deployment
-Automated testing
-Automated Docker builds
-Branch-based deployment
-GitHub integration
-Automatic webhook triggering
-Jenkins Controller-Agent architecture
-Ansible automation
-Docker containerization
-Repeatable deployments
-Centralized Jenkins build history
-Faster development cycle
-Easier troubleshooting
-Clear separation between development and production
-🚀 Future Enhancements
+| Job Name | Executing Agent | Primary Responsibility |
+| :--- | :--- | :--- |
+| **Build** | `Slave1` | Code checkout & Docker image compilation |
+| **Test** | `Slave2` | Application integration & endpoint testing |
+| **Prod** | `built-in` *(Master)* | Container deployment & live verification |
 
-The project can be extended with:
+---
 
-CI/CD
-SonarQube
-Automated code quality checks
-Security scanning
-Docker image scanning
-Approval gates
-Automatic rollback
-Blue-Green deployment
-Canary deployment
-AWS
-Amazon ECR
-Application Load Balancer
-Auto Scaling
-CloudWatch
-Multiple Availability Zones
-Containers
-Kubernetes
-Amazon EKS
-Infrastructure as Code
-Terraform
-Monitoring
-Prometheus
-Grafana
-CloudWatch
-Security
-AWS Secrets Manager
-HTTPS
-TLS certificates
-IAM least privilege
-📚 Learning Outcomes
+# 🌿 Branching Strategy Summary
 
-This project provides practical experience in:
+| Branch Name | Trigger Build Job? | Trigger Test Job? | Trigger Production Deployment? |
+| :--- | :---: | :---: | :---: |
+| `develop` | ✅ | ✅ | ❌ *(Stops after test)* |
+| `master` | ✅ | ✅ | ✅ *(Deploys to Live)* |
 
-AWS
-EC2
-Security Groups
-Cloud infrastructure
-Linux servers
-Linux
-SSH
-Package management
-Services
-Permissions
-Networking
-Process management
-Ansible
-Inventory
-Playbooks
-Configuration management
-Remote execution
-Automated software installation
-Git
-Repository management
-Branching
-Commit
-Push
-Pull
-Merge
-Conflict resolution
-Jenkins
-Controller-Agent architecture
-Nodes
-Executors
-Pipeline jobs
-Credentials
-Job chaining
-Automated builds
-Production deployment
-Docker
-Dockerfile
-Images
-Containers
-Port mapping
-Container lifecycle
-Docker troubleshooting
-GitHub
-Repository management
-Branches
-Personal Access Tokens
-Webhooks
-Automatic Jenkins triggering
-🎓 Project Demonstration
+---
 
-The project can be demonstrated in the following order.
+# 📈 Key Project Advantages
 
-1. Show AWS Infrastructure
-Master
-Slave1
-Slave2
-2. Show Ansible
+* **Full Automation:** Zero manual intervention required from code push to web deployment.
+* **Automated Quality Gates:** Builds and tests run automatically prior to production release.
+* **Isolated Environments:** Utilizes dedicated Jenkins agents (`Slave1`, `Slave2`, `Master`) for separation of concerns.
+* **Immutable Infrastructure:** Application packaged via Docker containers for consistent runtime environments.
+* **Configuration as Code:** Server provisioning automated using Ansible playbooks.
+* **Fast Feedback Loops:** Immediate developer notifications via GitHub Webhook execution status.
+
+---
+
+# 🚀 Future Enhancements
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          FUTURE ROADMAP                                 │
+├───────────────────┬───────────────────┬────────────────┬────────────────┤
+│    CI/CD & Code   │   AWS Cloud Infra │   Containers   │   Monitoring   │
+├───────────────────┼───────────────────┼────────────────┼────────────────┤
+│ • SonarQube       │ • Amazon ECR      │ • Kubernetes   │ • Prometheus   │
+│ • Trivy Scanner   │ • App Load Balancer│ • Amazon EKS   │ • Grafana      │
+│ • Blue/Green Deploy│ • Auto Scaling   │ • Helm Charts  │ • CloudWatch   │
+│ • Rollback Gates  │ • Terraform IaC   │                │                │
+└───────────────────┴───────────────────┴────────────────┴────────────────┘
+```
+
+---
+
+# 📚 Learning Outcomes
+
+* **Cloud Infrastructure:** Provisioned AWS EC2 instances and managed Security Group rules.
+* **Linux System Administration:** Configured permissions, SSH keys, background services, and network utilities.
+* **Infrastructure Automation:** Wrote Ansible playbooks for automated node orchestration and software configuration.
+* **CI/CD Pipeline Design:** Configured Jenkins Controller-Agent architecture, automated triggers, and multi-stage pipelines.
+* **Containerization:** Developed Dockerfiles, built custom images, mapped network ports, and managed container lifecycles.
+* **Version Control Workflows:** Implemented Git branching strategies, handled merges, and resolved pull request conflicts.
+
+---
+
+# 🎓 Step-by-Step Project Demonstration
+
+Follow this sequence to demonstrate the entire end-to-end CI/CD workflow:
+
+### 1. Verify AWS Infrastructure
+Ensure three EC2 nodes are running:
+* `Master` *(Jenkins Controller)*
+* `Slave1` *(Build Agent)*
+* `Slave2` *(Test Agent)*
+
+### 2. Check Ansible Connectivity
+```bash
 ansible all -m ping
+# Expected output: SUCCESS for all hosts
+```
 
-Show successful responses.
+### 3. Verify Jenkins Jobs
+Open Jenkins Dashboard and confirm jobs exist: `Build`, `Test`, `Prod`.
 
-3. Show Jenkins
+### 4. Verify GitHub Repository
+Confirm branches exist: `develop` and `master`.
 
-Show:
-
-Build
-Test
-Prod
-4. Show GitHub
-
-Show:
-
-develop
-master
-5. Modify Website
-
-Change:
-
-Version 2.0
-
-to:
-
-Version 3.0
-6. Push Develop
+### 5. Make Source Code Edit
+```bash
 git checkout develop
+nano index.html
+# Change "Version 2.0" to "Version 3.0"
+```
+
+### 6. Commit & Push to Staging
+```bash
 git add .
-git commit -m "Update website"
+git commit -m "Update website version to 3.0"
 git push origin develop
-7. Show Automatic Build
-Build
-   |
-   v
-Docker Build
-   |
-   v
-Test
-8. Show Automatic Test
-Test
-   |
-   v
-Application Test
-   |
-   v
-SUCCESS
-   |
-   v
-STOP
-9. Promote to Master
+```
+
+### 7. Observe Staging Pipeline Execution
+```text
+GitHub Push ➔ Webhook Trigger ➔ Build Job (Slave1) ➔ Test Job (Slave2) ➔ STOP
+```
+
+### 8. Promote Changes to Production
+```bash
 git checkout master
 git merge develop
 git push origin master
-10. Show Production
-Build
-   |
-   v
-Test
-   |
-   v
-Prod
-   |
-   v
-Docker
-   |
-   v
-Live Website
-11. Show Final Website
+```
 
-Open:
+### 9. Observe Production Pipeline Execution
+```text
+master Push ➔ Build Job ➔ Test Job ➔ Prod Job (Master) ➔ Docker Container Refresh ➔ Verified
+```
 
-http://<MASTER_PUBLIC_IP>
+### 10. Verify Updated Production Site
+Open browser at: `http://<MASTER_PUBLIC_IP>` — verify updated text (`Version 3.0`) is displayed.
 
-The updated website should be visible.
+---
 
-🏆 Complete Project Flow
+# 🏆 Complete Architectural Flow
+
+```text
                          👨‍💻 DEVELOPER
-                               |
-                               |
+                               │
                            git push
-                               |
-                               v
+                               │
+                               ▼
                       ┌─────────────────┐
                       │     GitHub      │
                       │    Repository   │
                       └────────┬────────┘
-                               |
-                           Webhook
-                               |
-                               v
+                               │
+                            Webhook
+                               │
+                               ▼
                       ┌─────────────────┐
                       │     Jenkins     │
                       │   Controller    │
                       └────────┬────────┘
-                               |
-                               v
+                               │
+                               ▼
                       ┌─────────────────┐
                       │   BUILD JOB     │
-                      │     Slave1      │
+                      │    (Slave1)     │
                       └────────┬────────┘
-                               |
-                         Docker Build
-                               |
-                               v
+                               │
+                          Docker Build
+                               │
+                               ▼
                       ┌─────────────────┐
                       │    TEST JOB     │
-                      │     Slave2      │
+                      │    (Slave2)     │
                       └────────┬────────┘
-                               |
-                         Application Test
-                               |
+                               │
+                        Application Test
+                               │
                         Branch Decision
                          /            \
                         /              \
-                       v                v
+                       ▼                ▼
                    develop            master
-                       |                |
-                       v                v
-                      STOP             PROD
-                                         |
-                                         v
-                                    Docker Build
-                                         |
-                                         v
-                                   Stop Old App
-                                         |
-                                         v
-                                  Start New App
-                                         |
-                                         v
-                                     Verify
-                                         |
-                                         v
-                                  🌐 WEBSITE
-🔁 DevOps Lifecycle Implemented
-              PLAN
-                |
-                v
-              CODE
-                |
-                v
-              BUILD
-                |
-                v
-              TEST
-                |
-                v
-             RELEASE
-                |
-                v
-             DEPLOY
-                |
-                v
-             OPERATE
-                |
-                v
-             MONITOR
+                       │                │
+                       ▼                ▼
+                     STOP             PROD
+                                        │
+                                   Docker Build
+                                        │
+                                  Stop Old App
+                                        │
+                                 Start New Container
+                                        │
+                                      Verify
+                                        │
+                                        ▼
+                                 🌐 LIVE WEBSITE
+```
 
-Core tools:
+---
 
-GitHub
-   ↓
-GitHub Webhook
-   ↓
-Jenkins
-   ↓
-Ansible
-   ↓
-Docker
-   ↓
-Apache
-   ↓
-Production
-⭐ Key Project Highlights
-AWS EC2 infrastructure
-Ubuntu Linux administration
-Ansible configuration management
-Jenkins Controller-Agent architecture
-GitHub source control
-GitHub Webhooks
-Branch-based CI/CD
-Automated Build pipeline
-Automated Test pipeline
-Automated Production pipeline
-Docker containerization
-Apache web server
-Jenkins job chaining
-GitHub authentication
-Production deployment
-Application verification
-Git merge conflict troubleshooting
-Jenkins executor troubleshooting
-Docker permission troubleshooting
-Git authentication troubleshooting
-GitHub Webhook 403 troubleshooting
-✅ Final Checklist
-Component	Status
-AWS EC2	✅
-Ubuntu	✅
-Master	✅
-Slave1	✅
-Slave2	✅
-Ansible	✅
-Jenkins	✅
-Jenkins Agents	✅
-GitHub	✅
-GitHub Credentials	✅
-Docker	✅
-Dockerfile	✅
-Build Job	✅
-Test Job	✅
-Production Job	✅
-Build → Test	✅
-Test → Production	✅
-Develop Branch	✅
-Master Branch	✅
-GitHub Webhook	✅
-Automatic Build	✅
-Automatic Test	✅
-Automatic Production Deployment	✅
-Website Verification	✅
-Troubleshooting	✅
-👨‍💻 Author
-Arpan Jena
+# 🔁 Implemented DevOps Lifecycle
 
-AWS | DevOps | Linux | Jenkins | Docker | Ansible | Git
+```text
+  PLAN ➔ CODE ➔ BUILD ➔ TEST ➔ RELEASE ➔ DEPLOY ➔ OPERATE ➔ MONITOR
+```
 
-GitHub:
+| Lifecycle Phase | Tool Employed |
+| :--- | :--- |
+| **Source Control** | GitHub |
+| **Automation Trigger** | GitHub Webhooks |
+| **Orchestration** | Jenkins Controller-Agent |
+| **Config Management** | Ansible |
+| **Containerization** | Docker |
+| **Web Server** | Apache (`httpd`) |
+| **Environment** | AWS EC2 (Ubuntu Linux) |
 
-https://github.com/arpanbiki
+---
+
+# ✅ Final Verification Checklist
+
+| Component | Status |
+| :--- | :---: |
+| AWS EC2 Provisioning | ✅ |
+| Ubuntu OS Configuration | ✅ |
+| Jenkins Controller Node | ✅ |
+| Jenkins Agent Node (`Slave1`) | ✅ |
+| Jenkins Agent Node (`Slave2`) | ✅ |
+| Ansible Automation Playbooks | ✅ |
+| GitHub Repository Setup | ✅ |
+| GitHub Credentials in Jenkins | ✅ |
+| Docker Daemon Installation | ✅ |
+| Dockerfile Optimization | ✅ |
+| Jenkins `Build` Job | ✅ |
+| Jenkins `Test` Job | ✅ |
+| Jenkins `Prod` Job | ✅ |
+| Pipeline Job Chaining | ✅ |
+| `develop` Branch Isolation | ✅ |
+| `master` Branch Production Flow | ✅ |
+| GitHub Webhook Triggering | ✅ |
+| End-to-End Site Verification | ✅ |
+
+---
+
+# 👨‍💻 Author
+
+**Arpan Jena**  
+*AWS | DevOps | Linux | Jenkins | Docker | Ansible | Git*  
+
+* **GitHub:** [arpanbiki](https://github.com/arpanbiki)
+
+---
 
 <div align="center">
-🚀 AWS Jenkins CI/CD Pipeline
-GitHub → Jenkins → Docker → Production
 
-Automated • Tested • Containerized • Deployed
+### 🚀 AWS Jenkins CI/CD Pipeline
+**GitHub → Jenkins → Docker → Production**  
+*Automated • Tested • Containerized • Deployed*
 
-⭐ Thank You for Visiting This Project ⭐
+⭐ **Thank You for Visiting This Project!** ⭐
 
-</div> ```
+</div>
