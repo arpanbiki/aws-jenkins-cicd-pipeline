@@ -108,6 +108,7 @@ master branch
      |
      v
  Live Website
+```
 
 Production Branch
 master
