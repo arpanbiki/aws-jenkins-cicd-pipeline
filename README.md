@@ -765,3 +765,368 @@ Build ➔ Test ➔ Application Test ➔ SUCCESS ➔ STOP
 ```
 
 > **Note:** Production deployment is automatically skipped when running on the `develop` branch.
+# 🚀 Phase 11 - Production Job
+
+* **Job Name:** `Prod`
+* **Assigned Agent:** `built-in` *(Jenkins Master / Production Node)*
+
+### Workflow
+```text
+Checkout ➔ Build Production Image ➔ Stop Existing Container ➔ Deploy Production ➔ Verify Deployment
+```
+
+### 📝 Production Pipeline Script
+
+```groovy
+pipeline {
+
+    agent {
+        label 'built-in' // Replace 'built-in' with your specific production node label if configured differently
+    }
+
+    parameters {
+        string(
+            name: 'BRANCH',
+            defaultValue: 'master',
+            description: 'Production branch'
+        )
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                git(
+                    branch: "${params.BRANCH}",
+                    credentialsId: 'github-credentials',
+                    url: '[https://github.com/arpanbiki/website.git](https://github.com/arpanbiki/website.git)'
+                )
+            }
+        }
+
+        stage('Build Production Image') {
+            steps {
+                sh 'docker build -t finalrelease .'
+            }
+        }
+
+        stage('Stop Existing Container') {
+            steps {
+                sh '''
+                    docker rm -f finalrelease-container 2>/dev/null || true
+                '''
+            }
+        }
+
+        stage('Deploy Production') {
+            steps {
+                sh '''
+                    docker run -d \
+                      --name finalrelease-container \
+                      -p 80:80 \
+                      finalrelease
+                '''
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sh '''
+                    sleep 10
+                    docker ps
+                    curl -f http://localhost
+                '''
+            }
+        }
+    }
+}
+```
+
+### 🔗 Jenkins Job Dependency
+
+```mermaid
+graph TD
+    BUILD[🔨 Build Job] --> TEST[🧪 Test Job]
+    TEST --> Branch{Branch Check}
+    Branch -->|develop| STOP[🛑 STOP]
+    Branch -->|master| PROD[🚀 Prod Job]
+    PROD --> Docker[🐳 Docker Engine]
+    Docker --> LiveSite((🌐 Live Website))
+```
+
+---
+
+# 🔔 Phase 12 - GitHub Webhook
+
+GitHub Webhooks automatically notify Jenkins upon any repository push.
+
+### 1. Configure GitHub Repository
+1. Navigate to:
+   ```text
+   GitHub ➔ Repository Settings ➔ Webhooks ➔ Add webhook
+   ```
+2. Set **Payload URL**:
+   ```text
+   http://<JENKINS_PUBLIC_IP>:8080/github-webhook/
+   ```
+   *Example:* `http://44.197.215.221:8080/github-webhook/`
+3. Set **Content type**: `application/json`
+4. Select **Event Triggers**: `Just the push event`
+5. Ensure **Active** is checked and click **Add webhook**.
+
+### 2. Configure Jenkins Job Trigger
+1. In Jenkins Console, open:
+   ```text
+   Build Job ➔ Configure ➔ Build Triggers
+   ```
+2. Enable **GitHub hook trigger for GSIOM polling**.
+
+### 🔄 Webhook Workflow
+
+```text
+git push ➔ GitHub ➔ Webhook Payload ➔ Jenkins Controller ➔ Trigger Build Job
+```
+
+### 🔍 Webhook Verification
+In GitHub, check:
+```text
+Settings ➔ Webhooks ➔ Recent Deliveries
+```
+> **Success Status:** A successful connection returns **HTTP 200 OK**, and Jenkins automatically triggers the `Build` job.
+
+---
+
+# 🌿 Phase 13 - Branch Strategy
+
+### 1. `develop` Branch Workflow
+Used strictly for validating code changes without affecting production.
+
+```mermaid
+graph LR
+    Dev[👨‍💻 Developer] -->|push| Develop[🌿 develop]
+    Develop --> Build[🔨 Build]
+    Build --> Test[🧪 Test]
+    Test --> Stop[🛑 STOP]
+```
+
+### 2. `master` Branch Workflow
+Triggers automated production deployment upon merging validated changes.
+
+```mermaid
+graph LR
+    Dev[👨‍💻 Developer] -->|push/merge| Master[🌿 master]
+    Master --> Build[🔨 Build]
+    Build --> Test[🧪 Test]
+    Test --> Prod[🚀 Prod]
+    Prod --> Docker[🐳 Docker]
+    Docker --> Live[🌐 Live Website]
+```
+
+---
+
+# 🌐 Phase 14 - Website Deployment Demonstration
+
+### Application Source (`index.html`)
+
+```html
+<html>
+<head>
+    <title>Intellipaat</title>
+</head>
+<body style="background-image:url('images/github3.jpg'); background-size:100%">
+    <h2 align="center">Hello World!</h2>
+    <section class="devops-section">
+        <h2>🚀 DevOps Deployment</h2>
+        <p>Version 2.0</p>
+        <p>GitHub → Jenkins → Docker → Production</p>
+        <p>Automatically built, tested and deployed.</p>
+    </section>
+</body>
+</html>
+```
+
+### 📝 Step-by-Step Change & Promotion Demonstration
+
+1. **Switch to `develop` Branch:**
+   ```bash
+   git checkout develop
+   ```
+
+2. **Edit Source Code:**
+   ```bash
+   nano index.html
+   ```
+   *Update version line:*
+   ```html
+   <p>Version 3.0 - Automated CI/CD Deployment</p>
+   <h3>Deployed automatically using Jenkins and Docker</h3>
+   ```
+
+3. **Verify Git Status:**
+   ```bash
+   git status
+   git diff
+   ```
+
+4. **Commit & Push to Staging:**
+   ```bash
+   git add index.html
+   git commit -m "Update website version to 3.0"
+   git push origin develop
+   ```
+
+5. **Observe Automatic Integration Pipeline:**
+   ```text
+   GitHub ➔ Webhook ➔ Build ➔ Test ➔ STOP (Staging verified)
+   ```
+
+6. **Promote Changes to Production (`master`):**
+   ```bash
+   git checkout master
+   git merge develop
+   git push origin master
+   ```
+
+7. **Observe Automated Production Pipeline:**
+   ```text
+   master ➔ Build ➔ Test ➔ Prod ➔ Docker Build ➔ Stop Old Container ➔ Run New Container ➔ Verified
+   ```
+
+8. **Verify Live Web Application:**
+   Access the server via browser or terminal:
+   ```bash
+   curl http://<MASTER_PUBLIC_IP>
+   ```
+
+---
+
+# 🐳 Docker Implementation
+
+Docker provides lightweight containerization for isolating web applications.
+
+```mermaid
+graph TD
+    App[Application Source] --> Dockerfile[📄 Dockerfile]
+    Dockerfile --> Image[📦 Docker Image]
+    Image --> Container[🏃 Docker Container]
+    Container --> Apache[🌐 Apache Web Server - Port 80]
+    Apache --> Web((🌐 Live Website))
+```
+
+### 🔧 Useful Docker CLI Commands
+
+| Command | Purpose |
+| :--- | :--- |
+| `docker --version` | Verify Docker installation version |
+| `docker images` | List locally cached Docker images |
+| `docker ps` | List currently active containers |
+| `docker ps -a` | List all containers (active and stopped) |
+| `docker logs finalrelease-container` | Inspect container application logs |
+| `docker stop finalrelease-container` | Gracefully stop the running production container |
+| `docker rm finalrelease-container` | Remove container instance |
+| `docker rmi finalrelease` | Remove locally built Docker image |
+
+### 🧪 Manual Container Verification Script
+```bash
+# Build image locally
+docker build -t finalrelease .
+
+# Run application container on port 80
+docker run -d --name finalrelease-container -p 80:80 finalrelease
+
+# Verify container status
+docker ps
+
+# Test application endpoint
+curl http://localhost
+```
+
+---
+
+# 🔧 Pipeline Scripts Summary
+
+```text
+[BUILD JOB]  Checkout ➔ Docker Build ➔ Trigger Test
+      │
+      ▼
+[TEST JOB]   Checkout ➔ Docker Build ➔ Run Test Container ➔ Test Endpoint ➔ Cleanup
+      │
+      ├─► (Branch == develop) ➔ 🛑 STOP
+      │
+      └─► (Branch == master)  ➔ Trigger Prod
+                                    │
+                                    ▼
+[PROD JOB]   Checkout ➔ Docker Build ➔ Stop Old Container ➔ Deploy New Container ➔ Verify
+```
+
+---
+
+# 🐞 Troubleshooting
+
+### 1. GitHub Authentication Error
+* **Error:** `remote: Invalid username or token. Password authentication is not supported for Git operations.`
+* **Cause:** GitHub deprecated account password authentication for HTTPS Git actions.
+* **Solution:** Create a GitHub Personal Access Token (PAT) and save it under Jenkins Credentials (`github-credentials`).
+
+### 2. Repository Not Found
+* **Error:** `fatal: repository not found`
+* **Solution:** Check remote origin URLs using `git remote -v`. Ensure correct repository syntax:
+  ```text
+  [https://github.com/arpanbiki/website.git](https://github.com/arpanbiki/website.git)
+  ```
+
+### 3. Jenkins Waiting for Executor
+* **Error:** `Still waiting to schedule task. Waiting for next available executor on 'Slave1'`
+* **Solution:** Check node status under `Jenkins ➔ Manage Jenkins ➔ Nodes`. Ensure `Slave1` is **Online** and not occupied by concurrent tasks.
+
+### 4. Slave2 Executor Unreachable
+* **Error:** `Waiting for next available executor on 'Slave2'`
+* **Solution:** Verify agent status under `Manage Jenkins ➔ Nodes ➔ Slave2`. Confirm SSH network connectivity and ensure the node is healthy.
+
+### 5. Docker Permission Denied
+* **Error:** `permission denied while trying to connect to the Docker daemon socket`
+* **Solution:** Add the Jenkins user to the Docker Linux group:
+  ```bash
+  sudo usermod -aG docker jenkins
+  sudo systemctl restart jenkins
+  ```
+  Verify via: `sudo -u jenkins docker ps`
+
+### 6. Docker Daemon Connection Failure
+* **Solution:** Verify service status and socket permissions:
+  ```bash
+  sudo systemctl status docker
+  ls -l /var/run/docker.sock
+  sudo systemctl restart docker jenkins
+  ```
+
+### 7. Apache Container Exit Issue
+* **Cause:** Stale Apache process locks (`apache2.pid`).
+* **Solution:** Ensure `CMD` in `Dockerfile` cleans up lockfiles prior to execution:
+  ```dockerfile
+  CMD ["sh", "-c", "rm -f /var/run/apache2/apache2.pid && apachectl -D FOREGROUND"]
+  ```
+
+### 8. Git Merge Conflict
+* **Error:** `index.html: needs merge. error: you need to resolve your current index first`
+* **Solution:** Resolve conflict markers inside `index.html`, stage the fixed file, and finalize the commit:
+  ```bash
+  git add index.html
+  git commit -m "Merge develop changes into master"
+  git push origin master
+  ```
+
+### 9. Git Uncommitted Merge State
+* **Error:** `You are still merging`
+* **Solution:** Finalize the active merge state with an explicit commit:
+  ```bash
+  git commit -m "Merge develop changes into master"
+  git push origin master
+  ```
+
+### 10. Website Changes Not Reflected
+* **Solution:** Check latest commit hash using `git log -1 --oneline`, verify running container image via `docker ps`, and recreate the container manually if needed:
+  ```bash
+  docker rm -f finalrelease-container
+  # Re-trigger Prod pipeline
+  ```
