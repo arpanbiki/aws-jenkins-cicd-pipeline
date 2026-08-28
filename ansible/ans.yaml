@@ -1,0 +1,27 @@
+---
+- name: Configure Master
+  hosts: masters
+  become: yes
+  tasks:
+    - name: Copy master.sh to Master
+      copy:
+        src: /etc/ansible/master.sh
+        dest: /tmp/master.sh
+        mode: '0755'
+
+    - name: Execute master.sh
+      command: /tmp/master.sh
+
+
+- name: Configure Slaves
+  hosts: slaves
+  become: yes
+  tasks:
+    - name: Copy slave.sh to Slaves
+      copy:
+        src: /etc/ansible/slave.sh
+        dest: /tmp/slave.sh
+        mode: '0755'
+
+    - name: Execute slave.sh
+      command: /tmp/slave.sh
